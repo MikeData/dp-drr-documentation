@@ -1,0 +1,73 @@
+
+Queues:
+-------
+
+data-source-queue                           {"source":"s3/somethingorother", "sourceId": <sourceUUID> }
+
+task-queue-<sourceUUID>                     {"dim1":["item1", "item5"], "dim2":["item3"}
+
+result-queue-<sourceUUID>                   {"sourceId":<sourceUUID>, "sparsityAfter: 90, rowsAfter:1000, fromConsumer:3, process:{"dim1":[item3, item2], dim2:[item4]}}
+
+write-queue-<sourceUUID>                    # as above, but only includes positive changes
+
+workers-running-queue                       {"workerNo":3, "sourceId":<sourceUUID>, "started": <datetime>}
+
+# note: <n> is number of workers running/to run
+
+
+Services
+--------
+
+Starter (PYTHON)  # offline
+- strip to bare minimum dimensions
+- send to s3
+- PUT initial size/sparsity/url/initialtasks to controller
+
+
+Controller (GO) api->SQS messager
+
+- IF there's anything in the workers-running-queue refuse the job   # for now
+- WHEN size/sparsity/s3url received
+- assign a sourceUUID to this source
+- CREATE task-queue-<sourceUUID>
+- CREATE result-queue-<sourceUUID>
+- CREATE data-source-queue (IF if doesn't already exist)
+- CREATE workers-running-queue (IF if doesn't already exist)
+- MSG task-queue-<sourceUUID> with intitial tasks
+- MSG data-source-queue * <n>   # starts up workers
+- LISTEN
+    when result received,
+
+
+
+Worker (PYTHON)
+- worker1:
+  consume from data-source-queue
+
+    once received:
+      load data specified in data-source queue, once done create:
+
+      -worker2:
+            execute tasks from task-queue-<sourceUUID>
+
+
+ResultWriter (GO)
+- from write-queue-<sourceUUID>, write to (SQL?) database. AWS RDS
+
+
+CloudFormation:
+---------------
+
+1 * SV controller
+n * SV worker        # start small, like 2
+1 * SV resultwriter
+1 * AWS REDIS elasticache
+1 * AWS RDS
+1 * AWS SQS
+
+
+
+Notes:
+------
+Lambda stop/start ec2 for basic ramp up/down..maybe.
+
