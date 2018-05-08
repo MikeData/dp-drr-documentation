@@ -2,4 +2,8 @@
 
 10% project. Analyse and report results of all possible dataset structural alterations.
 
-Repo contains intial notes plus user guidance etc.
+
+Repo containing terraform for deployment. Plus sundry notes and guidance.
+
+
+Uses terraform v0.11.3
